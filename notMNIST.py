@@ -5,12 +5,13 @@ import os
 import pickle
 import sys
 import tarfile
-from sklearn import linear_model
 from urllib import urlretrieve
 
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import ndimage
+from sklearn import linear_model
+from sklearn.metrics import f1_score, accuracy_score
 
 from Util.StringUtil import printProgress
 
@@ -195,7 +196,7 @@ def measure_overlap(dataset1, dataset2, exact=True):
                     overlap_counter += 1
                     break
             else:
-                if np.allclose(data1,data2):
+                if np.allclose(data1, data2):
                     overlap_counter += 1
                     break
         j += 1
@@ -207,7 +208,7 @@ def create_sanitized_dataset(dataset1, label1, dataset2, img_size, exact=True):
     overlap_counter = 0.
     j = 0
     sanitized_dataset, sanitized_label = make_arrays(len(dataset1), img_size)
-    for i in xrange(0,len(dataset1)):
+    for i in xrange(0, len(dataset1)):
         control = False
         for data2 in dataset2:
             if exact:
@@ -216,7 +217,7 @@ def create_sanitized_dataset(dataset1, label1, dataset2, img_size, exact=True):
                     control = True
                     break
             else:
-                if np.allclose(dataset1[i],data2):
+                if np.allclose(dataset1[i], data2):
                     overlap_counter += 1
                     break
         if not control:
@@ -248,25 +249,32 @@ train_dataset, train_labels = randomize(train_dataset, train_labels)
 test_dataset, test_labels = randomize(test_dataset, test_labels)
 valid_dataset, valid_labels = randomize(valid_dataset, valid_labels)
 
-n_train_samples = 50
+n_train_samples = 10000
 
 
 def train_model(train_dataset, train_labels, n_train_samples):
     clf = linear_model.LogisticRegression()
     nsamples, nx, ny = train_dataset.shape
-    d2_train_dataset = train_dataset.reshape((nsamples,nx*ny))
+    d2_train_dataset = train_dataset.reshape((nsamples, nx * ny))
     clf.fit(d2_train_dataset[:n_train_samples], train_labels[:n_train_samples])
     return clf
 
+
 def test_model(test_dataset, test_labels, clf):
-    predicted_labels = clf.predict(test_dataset)
+    nsamples, nx, ny = test_dataset.shape
+    d2_test_dataset = test_dataset.reshape((nsamples, nx * ny))
+    predicted_labels = clf.predict(d2_test_dataset)
+    print accuracy_score(test_labels, predicted_labels)
 
 
-train_model(train_dataset, train_labels, n_train_samples)
+clf = train_model(train_dataset, train_labels, n_train_samples)
+test_model(test_dataset, test_labels, clf)
 # measure_overlap(valid_dataset, test_dataset, exact=True)
 # measure_overlap(valid_dataset, test_dataset, exact=False)
-sanitized_valid_dataset, sanitized_valid_labels = create_sanitized_dataset(valid_dataset, valid_labels, train_dataset, image_size)
-sanitized_test_dataset, sanitized_test_labels = create_sanitized_dataset(test_dataset, test_labels, train_dataset, image_size)
+sanitized_valid_dataset, sanitized_valid_labels = create_sanitized_dataset(valid_dataset, valid_labels, train_dataset,
+                                                                           image_size)
+sanitized_test_dataset, sanitized_test_labels = create_sanitized_dataset(test_dataset, test_labels, train_dataset,
+                                                                         image_size)
 plt.imshow(test_dataset[0])
 plt.show()
 
