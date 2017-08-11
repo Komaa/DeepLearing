@@ -249,7 +249,7 @@ train_dataset, train_labels = randomize(train_dataset, train_labels)
 test_dataset, test_labels = randomize(test_dataset, test_labels)
 valid_dataset, valid_labels = randomize(valid_dataset, valid_labels)
 
-n_train_samples = 10000
+n_train_samples = 1000
 
 
 def train_model(train_dataset, train_labels, n_train_samples):
@@ -269,8 +269,8 @@ def test_model(test_dataset, test_labels, clf):
 
 clf = train_model(train_dataset, train_labels, n_train_samples)
 test_model(test_dataset, test_labels, clf)
-# measure_overlap(valid_dataset, test_dataset, exact=True)
-# measure_overlap(valid_dataset, test_dataset, exact=False)
+measure_overlap(valid_dataset, test_dataset, exact=True)
+measure_overlap(valid_dataset, test_dataset, exact=False)
 sanitized_valid_dataset, sanitized_valid_labels = create_sanitized_dataset(valid_dataset, valid_labels, train_dataset,
                                                                            image_size)
 sanitized_test_dataset, sanitized_test_labels = create_sanitized_dataset(test_dataset, test_labels, train_dataset,
