@@ -1,16 +1,15 @@
-
 import collections
 import math
 import numpy as np
 import os
 import random
-import tensorflow as tf
 import zipfile
+
+import tensorflow as tf
 from matplotlib import pylab
 from six.moves import range
 from six.moves.urllib.request import urlretrieve
 from sklearn.manifold import TSNE
-
 
 data_root = 'Data/'  # Change me to store data elsewhere
 url = 'http://mattmahoney.net/dc/'
@@ -31,20 +30,11 @@ def maybe_download(filename, expected_bytes):
     return filename
 
 
-filename = maybe_download('text8.zip', 31344016)
-
-
 def read_data(filename):
     """Extract the first file enclosed in a zip file as a list of words"""
     with zipfile.ZipFile(filename) as f:
         data = tf.compat.as_str(f.read(f.namelist()[0])).split()
     return data
-
-
-words = read_data(filename)
-print('Data size %d' % len(words))
-
-vocabulary_size = 50000
 
 
 def build_dataset(words):
@@ -53,6 +43,7 @@ def build_dataset(words):
     dictionary = dict()
     for word, _ in count:
         dictionary[word] = len(dictionary)
+
     data = list()
     unk_count = 0
     for word in words:
@@ -67,7 +58,13 @@ def build_dataset(words):
     return data, count, dictionary, reverse_dictionary
 
 
+filename = maybe_download('text8.zip', 31344016)
+words = read_data(filename)
+print('Data size %d' % len(words))
+
+vocabulary_size = 50000
 data, count, dictionary, reverse_dictionary = build_dataset(words)
+
 print('Most common words (+UNK)', count[:5])
 print('Sample data', data[:10])
 del words  # Hint to reduce memory.

@@ -165,7 +165,7 @@ with graph.as_default():
     learning_rate = tf.train.exponential_decay(
         0.1,
         global_step,  # Current index into the dataset.
-        train_size,  # Decay step.
+        train_size // batch_size,  # Decay step.
         0.65,
         staircase=True)
 
@@ -177,7 +177,6 @@ with graph.as_default():
     valid_prediction = tf.nn.softmax(model_without_dropout(tf_valid_dataset))
     test_prediction = tf.nn.softmax(model_without_dropout(tf_test_dataset))
 
-num_steps = 30001
 
 start_time = time.time()
 with tf.Session(graph=graph) as session:
