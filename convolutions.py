@@ -47,11 +47,11 @@ print('Test set', test_dataset.shape, test_labels.shape)
 
 batch_size = 64
 patch_size = 5
-depth = 6
-depth2 = 16
+depth = 32
+depth2 = 64
 num_hidden = 120
 num_hidden2 = 84
-beta = 3e-3
+beta = 5e-4
 num_epochs = 10
 
 graph = tf.Graph()
@@ -156,8 +156,7 @@ with graph.as_default():
     # adding regularizers
     regularizers = (tf.nn.l2_loss(layer5_weights) + tf.nn.l2_loss(layer5_biases) +
                     tf.nn.l2_loss(layer6_weights) + tf.nn.l2_loss(layer6_biases) +
-                    tf.nn.l2_loss(layer7_weights) + tf.nn.l2_loss(layer7_biases)
-                    )
+                    tf.nn.l2_loss(layer7_weights) + tf.nn.l2_loss(layer7_biases))
 
     loss = tf.reduce_mean(
         tf.nn.softmax_cross_entropy_with_logits(labels=tf_train_labels, logits=logits)) + beta * regularizers
@@ -166,10 +165,9 @@ with graph.as_default():
     learning_rate = tf.train.exponential_decay(
         0.1,
         global_step,  # Current index into the dataset.
-        10000,  # Decay step.
+        train_size,  # Decay step.
         0.65,
         staircase=True)
-    learning_rate = tf.train.exponential_decay(0.1, global_step, 1000, 0.65, staircase=True)
 
     optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step=global_step)
     # optimizer = tf.train.MomentumOptimizer(learning_rate,  0.9).minimize(loss, global_step=batch)
