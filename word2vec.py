@@ -74,6 +74,7 @@ data_index = 0
 
 def generate_batch(batch_size, num_skips, skip_window):
     global data_index
+    print "index2223", data_index
     assert batch_size % num_skips == 0
     assert num_skips <= 2 * skip_window
     batch = np.ndarray(shape=(batch_size), dtype=np.int32)
@@ -83,6 +84,7 @@ def generate_batch(batch_size, num_skips, skip_window):
     for _ in range(span):
         buffer.append(data[data_index])
         data_index = (data_index + 1) % len(data)
+    print buffer
     for i in range(batch_size // num_skips):
         target = skip_window  # target label at the center of the buffer
         targets_to_avoid = [skip_window]
@@ -94,6 +96,43 @@ def generate_batch(batch_size, num_skips, skip_window):
             labels[i * num_skips + j, 0] = buffer[target]
         buffer.append(data[data_index])
         data_index = (data_index + 1) % len(data)
+    print batch
+    print labels
+    print "index", data_index
+    return batch, labels
+
+
+def generate_batch_cbow(batch_size, skip_window):
+    global data_index
+    # print "index_before", data_index
+    batch = np.ndarray(shape=(batch_size, skip_window * 2), dtype=np.int32)
+    labels = np.ndarray(shape=(batch_size, 1), dtype=np.int32)
+    span = batch_size + skip_window * 2  # [ skip_window targetS skip_window ] adding word around target words
+    buffer = collections.deque(maxlen=span)
+
+    for _ in range(span):
+        index_buffer = data_index - skip_window
+        if index_buffer < 0:
+            buffer.append(0)
+        else:
+            buffer.append(data[index_buffer])
+        data_index = (data_index + 1) % len(data)
+    data_index -= skip_window * 2
+    # print buffer
+
+    for i in range(batch_size):
+        target = i + skip_window  # target label at the center of the buffer
+        after_target = 0
+        for j in range(skip_window * 2 + 1):
+            if (j + i) == target:
+                after_target = 1
+                continue
+            # print i, j
+            batch[i][j - after_target] = buffer[j + i]
+        labels[i, 0] = buffer[target]
+    # print batch
+    # print labels
+    # print "index", data_index
     return batch, labels
 
 
@@ -101,9 +140,19 @@ print('data:', [reverse_dictionary[di] for di in data[:8]])
 
 for num_skips, skip_window in [(2, 1), (4, 2)]:
     data_index = 0
-    batch, labels = generate_batch(batch_size=8, num_skips=num_skips, skip_window=skip_window)
+    # batch, labels = generate_batch(batch_size=8, num_skips=num_skips, skip_window=skip_window)
+    # print('\nwith num_skips = %d and skip_window = %d:' % (num_skips, skip_window))
+    # print('    batch:', [reverse_dictionary[bi] for bi in batch])
+    # print('    labels:', [reverse_dictionary[li] for li in labels.reshape(8)])
+    batch, labels = generate_batch_cbow(batch_size=8, skip_window=skip_window)
     print('\nwith num_skips = %d and skip_window = %d:' % (num_skips, skip_window))
-    print('    batch:', [reverse_dictionary[bi] for bi in batch])
+    print('batch:')
+
+    for neigh in batch:
+        line = ''
+        for bi in neigh:
+            line += str(reverse_dictionary[bi]) + ", "
+        print line
     print('    labels:', [reverse_dictionary[li] for li in labels.reshape(8)])
 
 batch_size = 128
@@ -122,24 +171,40 @@ graph = tf.Graph()
 
 with graph.as_default(), tf.device('/cpu:0'):
     # Input data.
-    train_dataset = tf.placeholder(tf.int32, shape=[batch_size])
+    train_dataset = tf.placeholder(tf.int32, shape=[batch_size,2*skip_window])
     train_labels = tf.placeholder(tf.int32, shape=[batch_size, 1])
     valid_dataset = tf.constant(valid_examples, dtype=tf.int32)
 
     # Variables.
-    embeddings = tf.Variable(
-        tf.random_uniform([vocabulary_size, embedding_size], -1.0, 1.0))
-    softmax_weights = tf.Variable(
-        tf.truncated_normal([vocabulary_size, embedding_size],
-                            stddev=1.0 / math.sqrt(embedding_size)))
+    embeddings = tf.Variable(tf.random_uniform([vocabulary_size, embedding_size], -1.0, 1.0))
+
+    softmax_weights = tf.Variable(tf.truncated_normal([vocabulary_size, embedding_size],
+                                                      stddev=1.0 / math.sqrt(embedding_size)))
     softmax_biases = tf.Variable(tf.zeros([vocabulary_size]))
 
     # Model.
     # Look up embeddings for inputs.
-    embed = tf.nn.embedding_lookup(embeddings, train_dataset)
+
+    # Model.
+    embeds = None
+
+    for i in range(2 * skip_window):
+        print embeddings.shape, train_dataset[:,i].shape
+        embedding_i = tf.nn.embedding_lookup(embeddings, train_dataset[:, i])
+        print('embedding %d shape: %s' % (i, embedding_i.get_shape().as_list()))
+        emb_x, emb_y = embedding_i.get_shape().as_list()
+        if embeds is None:
+            embeds = tf.reshape(embedding_i, [emb_x, emb_y, 1])
+        else:
+            embeds = tf.concat([embeds, tf.reshape(embedding_i, [emb_x, emb_y, 1])], 2)
+
+    assert embeds.get_shape().as_list()[2] == 2 * skip_window
+    print("Concat embedding size: %s" % embeds.get_shape().as_list())
+    avg_embed = tf.reduce_mean(embeds, 2, keep_dims=False)
+    print("Avg embedding size: %s" % avg_embed.get_shape().as_list())
     # Compute the softmax loss, using a sample of the negative labels each time.
     loss = tf.reduce_mean(
-        tf.nn.sampled_softmax_loss(weights=softmax_weights, biases=softmax_biases, inputs=embed,
+        tf.nn.sampled_softmax_loss(weights=softmax_weights, biases=softmax_biases, inputs=avg_embed,
                                    labels=train_labels, num_sampled=num_sampled, num_classes=vocabulary_size))
 
     # Optimizer.
@@ -165,8 +230,7 @@ with tf.Session(graph=graph) as session:
     print('Initialized')
     average_loss = 0
     for step in range(num_steps):
-        batch_data, batch_labels = generate_batch(
-            batch_size, num_skips, skip_window)
+        batch_data, batch_labels = generate_batch_cbow(batch_size, skip_window)
         feed_dict = {train_dataset: batch_data, train_labels: batch_labels}
         _, l = session.run([optimizer, loss], feed_dict=feed_dict)
         average_loss += l

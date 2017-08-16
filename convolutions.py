@@ -49,8 +49,8 @@ batch_size = 64
 patch_size = 5
 depth = 32
 depth2 = 64
-num_hidden = 120
-num_hidden2 = 84
+num_hidden = 512
+num_hidden2 = 128
 beta = 5e-4
 num_epochs = 10
 
@@ -106,14 +106,12 @@ with graph.as_default():
         conv = tf.nn.conv2d(data, layer1_weights, [1, 1, 1, 1], padding='SAME')
         hidden = tf.nn.relu(conv + layer1_biases)
         print "layer_1", hidden.shape
-
         hidden = tf.nn.max_pool(hidden, [1, 2, 2, 1], [1, 2, 2, 1], padding='SAME')
         print "layer_2", hidden.shape
 
         conv = tf.nn.conv2d(hidden, layer3_weights, [1, 1, 1, 1], padding='SAME')
         hidden = tf.nn.relu(conv + layer3_biases)
         print "layer_3", hidden.shape
-
         hidden = tf.nn.max_pool(hidden, [1, 2, 2, 1], [1, 2, 2, 1], padding='SAME')
         print "layer_4", hidden.shape
 
@@ -133,12 +131,10 @@ with graph.as_default():
     def model_without_dropout(data):
         conv = tf.nn.conv2d(data, layer1_weights, [1, 1, 1, 1], padding='SAME')
         hidden = tf.nn.relu(conv + layer1_biases)
-
         hidden = tf.nn.max_pool(hidden, [1, 2, 2, 1], [1, 2, 2, 1], padding='SAME')
 
         conv = tf.nn.conv2d(hidden, layer3_weights, [1, 1, 1, 1], padding='SAME')
         hidden = tf.nn.relu(conv + layer3_biases)
-
         hidden = tf.nn.max_pool(hidden, [1, 2, 2, 1], [1, 2, 2, 1], padding='SAME')
 
         shape = hidden.get_shape().as_list()
