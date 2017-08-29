@@ -64,6 +64,7 @@ with graph.as_default():
                                       shape=(batch_size, image_size, image_size, num_channels))  # 16,28,28,1
     tf_train_labels = tf.placeholder(tf.float32, shape=(batch_size, num_labels))  # 16,10
     tf_valid_dataset = tf.constant(valid_dataset)
+    # print valid_dataset, tf_valid_dataset
     tf_test_dataset = tf.constant(test_dataset)
     # Variables.
     layer1_weights = tf.Variable(tf.truncated_normal(

@@ -125,6 +125,8 @@ with tf.Session(graph=graph) as session:
         # Note: we could use better randomization across epochs.
         offset = (step * batch_size) % (train_labels.shape[0] - batch_size)
         # Generate a minibatch.
+        print train_dataset.shape
+        print train_labels.shape
         batch_data = train_dataset[offset:(offset + batch_size), :]
         batch_labels = train_labels[offset:(offset + batch_size), :]
         # Prepare a dictionary telling the session where to feed the minibatch.
